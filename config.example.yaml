@@ -41,6 +41,11 @@ api-keys:
   - "your-api-key-2"
   - "your-api-key-3"
 
+# Optional managed email domain patterns returned by GET /v0/management/domains
+# domains:
+#   - "*.icoa.qzz.io"
+#   - "*.icoe.pp.ua"
+
 # Enable debug logging
 debug: false
 

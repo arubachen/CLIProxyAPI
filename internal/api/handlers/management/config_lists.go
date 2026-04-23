@@ -118,6 +118,30 @@ func (h *Handler) DeleteAPIKeys(c *gin.Context) {
 	h.deleteFromStringList(c, &h.cfg.APIKeys, func() {})
 }
 
+// domains
+func (h *Handler) GetDomains(c *gin.Context) {
+	if len(h.cfg.Domains) == 0 {
+		c.JSON(200, gin.H{"domains": []string{}})
+		return
+	}
+	c.JSON(200, gin.H{"domains": h.cfg.Domains})
+}
+func (h *Handler) PutDomains(c *gin.Context) {
+	h.putStringList(c, func(v []string) {
+		h.cfg.Domains = config.NormalizeDomains(v)
+	}, nil)
+}
+func (h *Handler) PatchDomains(c *gin.Context) {
+	h.patchStringList(c, &h.cfg.Domains, func() {
+		h.cfg.Domains = config.NormalizeDomains(h.cfg.Domains)
+	})
+}
+func (h *Handler) DeleteDomains(c *gin.Context) {
+	h.deleteFromStringList(c, &h.cfg.Domains, func() {
+		h.cfg.Domains = config.NormalizeDomains(h.cfg.Domains)
+	})
+}
+
 // gemini-api-key: []GeminiKey
 func (h *Handler) GetGeminiKeys(c *gin.Context) {
 	c.JSON(200, gin.H{"gemini-api-key": h.geminiKeysWithAuthIndex()})

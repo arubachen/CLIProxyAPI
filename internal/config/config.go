@@ -42,6 +42,9 @@ type Config struct {
 	// AuthDir is the directory where authentication token files are stored.
 	AuthDir string `yaml:"auth-dir" json:"-"`
 
+	// Domains defines the managed email domain patterns returned by the management API.
+	Domains []string `yaml:"domains,omitempty" json:"domains,omitempty"`
+
 	// Debug enables or disables debug-level logging and other debug features.
 	Debug bool `yaml:"debug" json:"debug"`
 
@@ -695,6 +698,9 @@ func LoadConfigOptional(configFile string, optional bool) (*Config, error) {
 	// Normalize global OAuth model name aliases.
 	cfg.SanitizeOAuthModelAlias()
 
+	// Normalize managed email domain patterns.
+	cfg.Domains = NormalizeDomains(cfg.Domains)
+
 	// Validate raw payload rules and drop invalid entries.
 	cfg.SanitizePayloadRules()
 
@@ -967,6 +973,31 @@ func NormalizeExcludedModels(models []string) []string {
 	seen := make(map[string]struct{}, len(models))
 	out := make([]string, 0, len(models))
 	for _, raw := range models {
+		trimmed := strings.ToLower(strings.TrimSpace(raw))
+		if trimmed == "" {
+			continue
+		}
+		if _, exists := seen[trimmed]; exists {
+			continue
+		}
+		seen[trimmed] = struct{}{}
+		out = append(out, trimmed)
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
+// NormalizeDomains trims, lowercases, and deduplicates managed domain patterns.
+// It preserves the order of first occurrences and drops empty entries.
+func NormalizeDomains(domains []string) []string {
+	if len(domains) == 0 {
+		return nil
+	}
+	seen := make(map[string]struct{}, len(domains))
+	out := make([]string, 0, len(domains))
+	for _, raw := range domains {
 		trimmed := strings.ToLower(strings.TrimSpace(raw))
 		if trimmed == "" {
 			continue

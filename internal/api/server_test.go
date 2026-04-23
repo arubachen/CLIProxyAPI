@@ -84,6 +84,54 @@ func TestHealthz(t *testing.T) {
 	})
 }
 
+func TestManagementDomainsRouteRegistered(t *testing.T) {
+	t.Setenv("MANAGEMENT_PASSWORD", "test-management-key")
+
+	server := newTestServer(t)
+	server.cfg.Domains = []string{"*.icoa.qzz.io", "*.icoe.pp.ua"}
+
+	req := httptest.NewRequest(http.MethodGet, "/v0/management/domains", nil)
+	rr := httptest.NewRecorder()
+	server.engine.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusOK {
+		t.Fatalf("unexpected status code: got %d want %d; body=%s", rr.Code, http.StatusOK, rr.Body.String())
+	}
+
+	var resp struct {
+		Domains []string `json:"domains"`
+	}
+	if err := json.Unmarshal(rr.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("failed to parse response JSON: %v; body=%s", err, rr.Body.String())
+	}
+	if len(resp.Domains) != 2 {
+		t.Fatalf("expected 2 domains, got %d; body=%s", len(resp.Domains), rr.Body.String())
+	}
+	if resp.Domains[0] != "*.icoa.qzz.io" || resp.Domains[1] != "*.icoe.pp.ua" {
+		t.Fatalf("unexpected domains response: %#v", resp.Domains)
+	}
+}
+
+func TestManagementDomainsWritesStillRequireKey(t *testing.T) {
+	t.Setenv("MANAGEMENT_PASSWORD", "test-management-key")
+
+	server := newTestServer(t)
+	server.cfg.Domains = []string{"*.icoa.qzz.io"}
+
+	req := httptest.NewRequest(http.MethodPut, "/v0/management/domains", strings.NewReader(`["*.ice.231222.xyz"]`))
+	req.Header.Set("Content-Type", "application/json")
+	rr := httptest.NewRecorder()
+	server.engine.ServeHTTP(rr, req)
+
+	if rr.Code != http.StatusUnauthorized {
+		t.Fatalf("unexpected status code: got %d want %d; body=%s", rr.Code, http.StatusUnauthorized, rr.Body.String())
+	}
+
+	if !strings.Contains(rr.Body.String(), "missing management key") {
+		t.Fatalf("unexpected response body: %s", rr.Body.String())
+	}
+}
+
 func TestAmpProviderModelRoutes(t *testing.T) {
 	testCases := []struct {
 		name         string
